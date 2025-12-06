@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2f3a 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(30, 41, 59, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            padding: 20px;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            margin-left: auto;
+            border-radius: 20px 20px 4px 20px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .bot-message {
+            background: rgba(51, 65, 85, 0.8);
+            margin-right: auto;
+            border-radius: 20px 20px 20px 4px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 25px;
+            background: rgba(30, 41, 59, 0.8);
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #chatInput:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        #sendButton {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #sendButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        #sendButton:active {
+            transform: translateY(0);
+        }
+
+        #sendButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 20px;
+            max-width: 70px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .setup-container {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .setup-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .setup-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 15px;
+            background: rgba(30, 41, 59, 0.8);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .setup-form button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.5);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 AI Chatbot Assistant</h1>
+            <p>Powered by your deployed API</p>
+        </div>
+
+        <div class="setup-container">
+            <div class="setup-form">
+                <input type="text" id="companyName" placeholder="Company Name (e.g., Syngrid)">
+                <input type="text" id="websiteUrl" placeholder="Website URL (e.g., https://syngrid.com)">
+                <button onclick="createChatbot()">Create Chatbot</button>
+            </div>
+            <div id="statusMessage"></div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="bot-message message">
+                👋 Hello! I'm your AI assistant. Create a chatbot above to get started, or just start chatting!
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <input 
+                    type="text" 
+                    id="chatInput" 
+                    placeholder="Type your message here..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button id="sendButton" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://chatbot-kagh.onrender.com';
+        let currentChatbotId = null;
+
+        // Create a new chatbot
+        async function createChatbot() {
+            const companyName = document.getElementById('companyName').value.trim();
+            const websiteUrl = document.getElementById('websiteUrl').value.trim();
+            const statusDiv = document.getElementById('statusMessage');
+
+            if (!companyName || !websiteUrl) {
+                showStatus('Please enter both company name and website URL', 'error');
+                return;
+            }
+
+            showStatus('Creating chatbot... This may take a minute.', 'success');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/chatbot/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_name: companyName,
+                        website_url: websiteUrl
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentChatbotId = data.chatbot_id;
+                    showStatus(`✅ Chatbot created successfully! ID: ${data.chatbot_id}`, 'success');
+                    addMessage(`Chatbot for ${companyName} is ready! You can now ask me questions.`, 'bot');
+                } else {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Send a chat message
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            showTyping(true);
+
+            try {
+                // If no chatbot created yet, use a demo chatbot ID
+                const chatbotId = currentChatbotId || 'demo123';
+
+                const response = await fetch(`${API_BASE_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chatbot_id: chatbotId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                showTyping(false);
+
+                if (data.success) {
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage(`Error: ${data.error}`, 'bot');
+                }
+            } catch (error) {
+                showTyping(false);
+                addMessage(`Error: ${error.message}. The API might be starting up (first request can take 50+ seconds on free tier).`, 'bot');
+            }
+        }
+
+        // Add message to chat
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Show/hide typing indicator
+        function showTyping(show) {
+            const indicator = document.getElementById('typingIndicator');
+            if (show) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+        }
+
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Test API connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const data = await response.json();
+                if (data.status === 'healthy') {
+                    showStatus('✅ Connected to API successfully!', 'success');
+                }
+            } catch (error) {
+                showStatus('⚠️ API is starting up... First request may take 50+ seconds.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
