@@ -9,12 +9,12 @@ import json
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Dark theme configuration
+# Mobile-style app configuration
 st.set_page_config(
-    page_title="AI Chat Helper",
+    page_title="AI Chat Pro",
     page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # Get API key
@@ -36,189 +36,231 @@ MODELS = [
     "nousresearch/hermes-3-llama-3.1-405b:free"
 ]
 
-# Modern dark theme CSS
+# Mobile-style CSS with robot character
 st.markdown("""
 <style>
-    /* Dark theme base */
+    /* Mobile app theme */
     .stApp {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        max-width: 450px;
+        margin: 0 auto;
     }
     
-    /* Sidebar dark theme */
+    /* Hide sidebar */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f0f1e 0%, #1a1a2e 100%);
-        border-right: 1px solid #2d2d44;
+        display: none;
     }
     
-    /* Main header */
-    .main-header {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        color: white;
-        margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+    /* Robot character container */
+    .robot-container {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, #1a3a52 0%, #2d5f7a 100%);
+        border-radius: 24px;
+        margin: 1rem 0;
+        border: 2px solid rgba(52, 211, 153, 0.3);
+        box-shadow: 0 8px 32px rgba(52, 211, 153, 0.2);
     }
     
-    .main-header h1 {
-        margin: 0;
-        font-size: 2.5rem;
+    .robot-emoji {
+        font-size: 8rem;
+        margin: 1rem 0;
+        filter: drop-shadow(0 0 20px rgba(52, 211, 153, 0.5));
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+    
+    /* Title styling */
+    .app-title {
+        font-size: 2rem;
         font-weight: 700;
-        background: linear-gradient(to right, #fff, #e0e7ff);
+        color: white;
+        text-align: center;
+        margin: 1rem 0;
+        background: linear-gradient(to right, #34d399, #10b981);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
     
-    /* Chat container */
-    .chat-container {
-        background: rgba(30, 30, 46, 0.6);
+    .app-subtitle {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+    
+    /* Feature cards */
+    .feature-card {
+        background: rgba(30, 41, 59, 0.6);
         backdrop-filter: blur(10px);
+        border: 1px solid rgba(52, 211, 153, 0.2);
         border-radius: 16px;
-        padding: 2rem;
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        min-height: 400px;
-        max-height: 600px;
-        overflow-y: auto;
-    }
-    
-    /* User message */
-    .user-msg {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 16px 16px 4px 16px;
-        margin: 1rem 0;
-        margin-left: auto;
-        max-width: 70%;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-        animation: slideInRight 0.3s ease;
-    }
-    
-    /* Bot message */
-    .bot-msg {
-        background: rgba(45, 45, 68, 0.8);
-        color: #e0e7ff;
-        padding: 1rem 1.5rem;
-        border-radius: 16px 16px 16px 4px;
-        margin: 1rem 0;
-        max-width: 70%;
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        animation: slideInLeft 0.3s ease;
-    }
-    
-    @keyframes slideInRight {
-        from { transform: translateX(50px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideInLeft {
-        from { transform: translateX(-50px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    /* Code blocks */
-    .code-block {
-        background: #1e1e2e;
-        border: 1px solid #6366f1;
-        border-radius: 8px;
         padding: 1rem;
         margin: 0.5rem 0;
-        font-family: 'Courier New', monospace;
-        color: #a5b4fc;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .feature-card:hover {
+        border-color: #34d399;
+        transform: translateX(5px);
+        box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3);
+    }
+    
+    .feature-icon {
+        font-size: 2rem;
+        min-width: 50px;
+    }
+    
+    .feature-text {
+        color: #e2e8f0;
+        font-size: 0.9rem;
+    }
+    
+    /* Pricing card */
+    .pricing-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border: 2px solid #34d399;
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(52, 211, 153, 0.3);
+    }
+    
+    .price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #34d399;
+        margin: 1rem 0;
+    }
+    
+    .price-subtitle {
+        color: #94a3b8;
+        font-size: 0.9rem;
+    }
+    
+    /* Chat bubble */
+    .chat-bubble {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        color: #e2e8f0;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+    
+    .user-bubble {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        color: white;
+        border: none;
+        margin-left: 2rem;
+    }
+    
+    .bot-bubble {
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        margin-right: 2rem;
     }
     
     /* Buttons */
     .stButton>button {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
         color: white;
         border: none;
-        border-radius: 12px;
-        padding: 0.75rem 2rem;
+        border-radius: 16px;
+        padding: 1rem 2rem;
         font-weight: 600;
+        font-size: 1.1rem;
+        width: 100%;
         transition: all 0.3s;
-        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        box-shadow: 0 4px 20px rgba(52, 211, 153, 0.4);
+        text-transform: none;
     }
     
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        box-shadow: 0 6px 28px rgba(52, 211, 153, 0.6);
     }
     
     /* Input fields */
     .stTextInput>div>div>input {
-        background: rgba(30, 30, 46, 0.8);
-        border: 2px solid rgba(99, 102, 241, 0.3);
-        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.8);
+        border: 2px solid rgba(52, 211, 153, 0.3);
+        border-radius: 16px;
         color: white;
-        padding: 0.75rem;
+        padding: 1rem;
+        font-size: 1rem;
     }
     
     .stTextInput>div>div>input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        border-color: #34d399;
+        box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
     }
     
-    /* Cards */
-    .stat-card {
-        background: rgba(30, 30, 46, 0.6);
-        backdrop-filter: blur(10px);
-        padding: 1.5rem;
+    /* Character selector */
+    .character-card {
+        background: rgba(30, 41, 59, 0.6);
+        border: 2px solid rgba(52, 211, 153, 0.2);
         border-radius: 16px;
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
         transition: all 0.3s;
     }
     
-    .stat-card:hover {
-        transform: translateY(-5px);
-        border-color: #6366f1;
-        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    .character-card:hover {
+        border-color: #34d399;
+        transform: scale(1.05);
+        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.4);
     }
     
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(to right, #6366f1, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    /* Sidebar items */
-    .sidebar-item {
-        background: rgba(99, 102, 241, 0.1);
-        padding: 0.75rem;
-        border-radius: 8px;
+    .character-emoji {
+        font-size: 3rem;
         margin: 0.5rem 0;
-        border-left: 3px solid #6366f1;
-        color: #e0e7ff;
     }
     
-    /* Hide Streamlit branding */
+    .character-name {
+        color: #e2e8f0;
+        font-weight: 600;
+        margin: 0.5rem 0;
+    }
+    
+    .character-role {
+        color: #94a3b8;
+        font-size: 0.85rem;
+    }
+    
+    /* Hide streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    .stDeployButton {display: none;}
     
     /* Scrollbar */
     ::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
     }
     
     ::-webkit-scrollbar-track {
-        background: rgba(30, 30, 46, 0.5);
+        background: rgba(30, 41, 59, 0.5);
     }
     
     ::-webkit-scrollbar-thumb {
-        background: #6366f1;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: #8b5cf6;
+        background: #34d399;
+        border-radius: 3px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Helper Classes
+# Helper Classes (same as before)
 class EnhancedScraper:
     def __init__(self):
         self.headers = {"User-Agent": "Mozilla/5.0"}
@@ -229,39 +271,32 @@ class EnhancedScraper:
         if soup.title:
             content_parts.append(f"TITLE: {soup.title.string}")
         
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
-        if meta_desc and meta_desc.get('content'):
-            content_parts.append(f"DESC: {meta_desc.get('content')}")
-        
         headings = soup.find_all(['h1', 'h2', 'h3'])
-        for h in headings[:15]:
+        for h in headings[:10]:
             text = h.get_text(strip=True)
             if text:
                 content_parts.append(f"{h.name.upper()}: {text}")
         
         paragraphs = soup.find_all('p')
-        for p in paragraphs[:20]:
+        for p in paragraphs[:15]:
             text = p.get_text(strip=True)
             if len(text) > 20:
                 content_parts.append(text)
         
-        return '\n'.join(content_parts)[:4000]
+        return '\n'.join(content_parts)[:3000]
     
     def scrape_page(self, url):
         try:
-            resp = requests.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
+            resp = requests.get(url, headers=self.headers, timeout=self.timeout)
             if resp.status_code != 200:
                 return None
             
             soup = BeautifulSoup(resp.text, 'html.parser')
-            for tag in soup(['script', 'style', 'nav', 'footer', 'header']):
+            for tag in soup(['script', 'style']):
                 tag.decompose()
             
             content = self.extract_content(soup)
-            if not content or len(content) < 100:
-                return None
-            
-            return {"url": url, "content": content}
+            return {"url": url, "content": content} if content and len(content) > 100 else None
         except:
             return None
     
@@ -269,21 +304,15 @@ class EnhancedScraper:
         if not base_url.startswith('http'):
             base_url = 'https://' + base_url
         
-        urls = [base_url, f"{base_url}/about", f"{base_url}/services"]
+        urls = [base_url]
         pages = []
         
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures = {executor.submit(self.scrape_page, url): url for url in urls}
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    pages.append(result)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            result = executor.submit(self.scrape_page, base_url).result()
+            if result:
+                pages.append(result)
         
-        all_text = '\n'.join([p['content'] for p in pages])
-        emails = list(set(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', all_text)))[:5]
-        phones = list(set(re.findall(r'(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}', all_text)))[:5]
-        
-        return pages, {"emails": emails, "phones": phones}
+        return pages, {}
 
 class SmartAI:
     def __init__(self):
@@ -292,7 +321,7 @@ class SmartAI:
     
     def call_llm(self, prompt):
         if not OPENROUTER_API_KEY:
-            return "⚠️ Please configure API key in secrets"
+            return "⚠️ Please configure API key"
         
         cache_key = hashlib.md5(prompt.encode()).hexdigest()[:12]
         if cache_key in self.cache:
@@ -305,9 +334,7 @@ class SmartAI:
                     OPENROUTER_API_BASE,
                     headers={
                         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://github.com",
-                        "X-Title": "Chatbot"
+                        "Content-Type": "application/json"
                     },
                     json={
                         "model": model,
@@ -320,7 +347,7 @@ class SmartAI:
                 
                 if resp.status_code == 200:
                     data = resp.json()
-                    if "choices" in data and len(data["choices"]) > 0:
+                    if "choices" in data:
                         result = data["choices"][0]["message"]["content"].strip()
                         self.cache[cache_key] = result
                         return result
@@ -334,13 +361,10 @@ class SmartAI:
 # Initialize session
 def init_session():
     defaults = {
-        'chatbots': {},
-        'current_view': 'chat',
-        'selected_chatbot': None,
+        'view': 'welcome',
+        'selected_character': None,
+        'chatbot': None,
         'chat_history': [],
-        'question_count': 0,
-        'lead_captured': False,
-        'leads': [],
         'ai_engine': SmartAI()
     }
     for key, val in defaults.items():
@@ -349,195 +373,166 @@ def init_session():
 
 init_session()
 
-# Sidebar
-with st.sidebar:
-    st.markdown('<div class="sidebar-item"><h2 style="margin:0;">🤖 AI Chat Helper</h2></div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    if st.button("💬 New Chat", use_container_width=True):
-        st.session_state.chat_history = []
-        st.session_state.question_count = 0
-        st.session_state.lead_captured = False
-        st.rerun()
-    
-    if st.button("🤖 Create Chatbot", use_container_width=True):
-        st.session_state.current_view = 'create'
-        st.rerun()
-    
-    if st.button("📊 View Leads", use_container_width=True):
-        st.session_state.current_view = 'leads'
-        st.rerun()
-    
-    st.markdown("---")
-    st.markdown('<div class="sidebar-item">', unsafe_allow_html=True)
-    st.markdown(f"**Active Bots:** {len(st.session_state.chatbots)}")
-    st.markdown(f"**Total Leads:** {len(st.session_state.leads)}")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    if OPENROUTER_API_KEY:
-        st.success("✅ API Connected")
-    else:
-        st.error("❌ API Not Set")
-
-# Main content
-if st.session_state.current_view == 'create':
+# Welcome screen
+if st.session_state.view == 'welcome':
     st.markdown("""
-    <div class="main-header">
-        <h1>🚀 Create AI Chatbot</h1>
-        <p style="margin:0.5rem 0 0 0; opacity:0.9;">Build intelligent chatbot for your website</p>
+    <div class="robot-container">
+        <div class="robot-emoji">🤖</div>
+        <h2 style="color: white; margin: 0;">AI Chat Pro</h2>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([2, 1])
+    st.markdown('<div class="app-subtitle">Your AI assistant that can quickly respond to any of your questions. Whether you need help with homework, a coding doubt, virtual doctor, or anyone else you may think of, Chat with us!</div>', unsafe_allow_html=True)
     
+    # Features
+    st.markdown("""
+    <div class="feature-card">
+        <div class="feature-icon">🚫</div>
+        <div class="feature-text"><strong>No limitation</strong></div>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🚫</div>
+        <div class="feature-text"><strong>No Ads</strong></div>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-text"><strong>All Functions</strong></div>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">❌</div>
+        <div class="feature-text"><strong>Cancel Anytime</strong></div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Pricing
+    st.markdown("""
+    <div class="pricing-card">
+        <div class="price-subtitle">Free Forever</div>
+        <div class="price">$0</div>
+        <div class="price-subtitle">No credit card required</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("Continue >>>"):
+        st.session_state.view = 'characters'
+        st.rerun()
+
+# Character selection
+elif st.session_state.view == 'characters':
+    st.markdown('<div class="app-title">Choose Your AI Assistant</div>', unsafe_allow_html=True)
+    
+    characters = [
+        {"emoji": "👨‍💼", "name": "Name Generator", "role": "Translator"},
+        {"emoji": "👨‍💻", "name": "Prompt Engineer", "role": "Writer"},
+        {"emoji": "🤖", "name": "AI Chat Pro", "role": "Interviewer"},
+        {"emoji": "⚕️", "name": "Virtual Doctor", "role": "Mental Health Advisor"},
+        {"emoji": "🔮", "name": "Astrologer", "role": "Any Character"}
+    ]
+    
+    cols = st.columns(2)
+    for idx, char in enumerate(characters):
+        with cols[idx % 2]:
+            st.markdown(f"""
+            <div class="character-card">
+                <div class="character-emoji">{char['emoji']}</div>
+                <div class="character-name">{char['name']}</div>
+                <div class="character-role">{char['role']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(f"Select {char['name']}", key=f"char_{idx}", use_container_width=True):
+                st.session_state.selected_character = char
+                st.session_state.view = 'setup'
+                st.rerun()
+
+# Setup chatbot
+elif st.session_state.view == 'setup':
+    char = st.session_state.selected_character
+    
+    st.markdown(f"""
+    <div class="robot-container">
+        <div class="robot-emoji">{char['emoji']}</div>
+        <h2 style="color: white; margin: 0.5rem 0;">{char['name']}</h2>
+        <p style="color: #94a3b8; margin: 0;">{char['role']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="app-subtitle">Enter a website URL to train your AI assistant</div>', unsafe_allow_html=True)
+    
+    website_url = st.text_input("🌐 Website URL", placeholder="https://example.com", label_visibility="collapsed")
+    
+    if st.button("Start Chatting"):
+        if website_url:
+            with st.spinner("🔄 Training AI..."):
+                try:
+                    scraper = EnhancedScraper()
+                    pages, _ = scraper.scrape_website(website_url)
+                    
+                    if pages:
+                        st.session_state.chatbot = {
+                            'character': char,
+                            'url': website_url,
+                            'pages': pages
+                        }
+                        st.session_state.view = 'chat'
+                        st.success("✅ Ready!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Couldn't access website")
+                except:
+                    st.error("❌ Error occurred")
+        else:
+            st.warning("⚠️ Please enter a URL")
+
+# Chat interface
+elif st.session_state.view == 'chat':
+    bot = st.session_state.chatbot
+    char = bot['character']
+    
+    # Header
+    col1, col2, col3 = st.columns([1, 3, 1])
     with col1:
-        company_name = st.text_input("🏢 Company Name", placeholder="e.g., TechCorp")
-        website_url = st.text_input("🌐 Website URL", placeholder="https://example.com")
-        
-        if st.button("✨ Create Chatbot", use_container_width=True):
-            if company_name and website_url:
-                with st.spinner("🔄 Creating chatbot..."):
-                    try:
-                        scraper = EnhancedScraper()
-                        pages, contact_info = scraper.scrape_website(website_url)
-                        
-                        if pages:
-                            chatbot_id = hashlib.md5(f"{company_name}{time.time()}".encode()).hexdigest()[:12]
-                            slug = re.sub(r'[^a-z0-9]+', '-', company_name.lower())
-                            
-                            st.session_state.chatbots[slug] = {
-                                'id': chatbot_id,
-                                'name': company_name,
-                                'url': website_url,
-                                'pages': pages,
-                                'contact_info': contact_info
-                            }
-                            
-                            st.session_state.selected_chatbot = slug
-                            st.session_state.current_view = 'chat'
-                            st.success("✅ Chatbot created!")
-                            st.balloons()
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("❌ Failed to scrape website")
-                    except Exception as e:
-                        st.error(f"❌ Error: {str(e)}")
-    
+        if st.button("←"):
+            st.session_state.view = 'characters'
+            st.session_state.chat_history = []
+            st.rerun()
     with col2:
-        st.markdown("""
-        <div class="stat-card">
-            <div style="color:#a5b4fc; margin-bottom:0.5rem;">Quick Stats</div>
-            <div class="stat-number">{}</div>
-            <div style="color:#6b7280;">Total Chatbots</div>
-        </div>
-        """.format(len(st.session_state.chatbots)), unsafe_allow_html=True)
-
-elif st.session_state.current_view == 'leads':
-    st.markdown("""
-    <div class="main-header">
-        <h1>📊 Lead Management</h1>
-        <p style="margin:0.5rem 0 0 0; opacity:0.9;">View captured leads</p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:center; color:white; font-weight:600;">{char["name"]}</div>', unsafe_allow_html=True)
     
-    if st.session_state.leads:
-        for lead in st.session_state.leads[::-1]:
-            with st.expander(f"🎯 {lead['name']} - {lead.get('company', 'N/A')}"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**📧 Email:** {lead['email']}")
-                    st.write(f"**📱 Phone:** {lead.get('phone', 'N/A')}")
-                with col2:
-                    st.write(f"**💬 Questions:** {lead.get('questions', 0)}")
-                    st.write(f"**📅 Time:** {lead.get('timestamp', 'N/A')}")
-    else:
-        st.info("📭 No leads yet")
-
-else:  # Chat view
-    if st.session_state.selected_chatbot and st.session_state.selected_chatbot in st.session_state.chatbots:
-        bot = st.session_state.chatbots[st.session_state.selected_chatbot]
-        
-        st.markdown(f"""
-        <div class="main-header">
-            <h1>💬 {bot['name']}</h1>
-            <p style="margin:0.5rem 0 0 0; opacity:0.9;">AI-Powered Assistant</p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="main-header">
-            <h1>💬 AI Chat Helper</h1>
-            <p style="margin:0.5rem 0 0 0; opacity:0.9;">Create a chatbot to start</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("---")
     
-    # Chat container
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    
+    # Chat messages
     if st.session_state.chat_history:
         for msg in st.session_state.chat_history:
             if msg['role'] == 'user':
-                st.markdown(f'<div class="user-msg">👤 {msg["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="chat-bubble user-bubble">👤 {msg["content"]}</div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="bot-msg">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="chat-bubble bot-bubble">{char["emoji"]} {msg["content"]}</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div style="text-align:center; padding:3rem; color:#6b7280;">Start a conversation...</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="robot-container">
+            <div class="robot-emoji">{char['emoji']}</div>
+            <div style="color: #94a3b8;">How can I assist you?</div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Lead capture
-    if st.session_state.question_count >= 3 and not st.session_state.lead_captured:
-        st.markdown("---")
-        st.subheader("🎯 Quick Contact")
-        
-        with st.form("lead_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Name", placeholder="John Doe")
-                email = st.text_input("Email", placeholder="john@example.com")
-            with col2:
-                phone = st.text_input("Phone", placeholder="+1234567890")
-                company = st.text_input("Company", placeholder="Your Company")
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                submitted = st.form_submit_button("✅ Submit", use_container_width=True)
-            with col_b:
-                skipped = st.form_submit_button("⏭️ Skip", use_container_width=True)
-            
-            if submitted or skipped:
-                lead = {
-                    'name': name or 'Anonymous',
-                    'email': email or 'not_provided@example.com',
-                    'phone': phone or 'Not provided',
-                    'company': company or 'N/A',
-                    'questions': st.session_state.question_count,
-                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                st.session_state.leads.append(lead)
-                st.session_state.lead_captured = True
-                st.success("✅ Thank you!")
-                st.balloons()
-                time.sleep(1)
-                st.rerun()
-    
-    # Chat input
+    # Input
     st.markdown("---")
-    user_input = st.text_input("💬 Type your message...", key="chat_input", placeholder="Ask me anything...")
+    user_input = st.text_input("💬 Type your message...", placeholder="Ask me anything...", label_visibility="collapsed")
     
-    if st.button("📤 Send", use_container_width=True) and user_input:
+    if st.button("Send 📤") and user_input:
         st.session_state.chat_history.append({'role': 'user', 'content': user_input})
         
         with st.spinner("🤖 Thinking..."):
             if any(g in user_input.lower() for g in ['hi', 'hello', 'hey']):
-                response = "👋 Hello! How can I help you today?"
-            elif st.session_state.selected_chatbot and st.session_state.selected_chatbot in st.session_state.chatbots:
-                bot = st.session_state.chatbots[st.session_state.selected_chatbot]
+                response = f"👋 Hello! I'm {char['name']}, your {char['role']}. How can I help you?"
+            else:
                 context = bot['pages'][0]['content'][:800] if bot['pages'] else "No content"
-                prompt = f"""You are a helpful AI assistant.
+                prompt = f"""You are {char['name']}, a helpful {char['role']}.
 
 Context: {context}
 
@@ -545,9 +540,6 @@ Question: {user_input}
 
 Answer (2-3 sentences):"""
                 response = st.session_state.ai_engine.call_llm(prompt)
-            else:
-                response = "Please create a chatbot first to get started!"
         
         st.session_state.chat_history.append({'role': 'assistant', 'content': response})
-        st.session_state.question_count += 1
         st.rerun()
