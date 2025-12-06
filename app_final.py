@@ -360,7 +360,7 @@ class SmartAI:
     
     def call_llm(self, prompt):
         if not OPENROUTER_API_KEY:
-            return "⚠️ Please configure API key"
+            return self.fallback_response(prompt)
         
         cache_key = hashlib.md5(prompt.encode()).hexdigest()[:12]
         if cache_key in self.cache:
@@ -395,7 +395,54 @@ class SmartAI:
             
             self.current_model_index = (self.current_model_index + 1) % len(MODELS)
         
-        return "I'm having trouble connecting. Please try again."
+        # If all API attempts fail, use fallback
+        return self.fallback_response(prompt)
+    
+    def fallback_response(self, prompt):
+        """Generate intelligent responses from context when API fails"""
+        # Extract question from prompt
+        question = ""
+        if "Question:" in prompt:
+            question = prompt.split("Question:")[-1].split("Answer")[0].strip()
+        
+        # Extract context
+        context = ""
+        if "Context:" in prompt:
+            context = prompt.split("Context:")[1].split("Question:")[0].strip()
+        
+        question_lower = question.lower()
+        
+        # Smart keyword-based responses using context
+        if any(word in question_lower for word in ['what is', 'what are', 'tell me about']):
+            # Extract first few sentences from context
+            sentences = context.split('.')[:3]
+            if sentences:
+                return '. '.join(sentences).strip() + '.'
+        
+        if any(word in question_lower for word in ['how', 'why', 'when']):
+            # Look for relevant info in context
+            lines = context.split('\n')
+            relevant = [line for line in lines if any(word in line.lower() for word in question_lower.split())]
+            if relevant:
+                return relevant[0][:200]
+        
+        if any(word in question_lower for word in ['contact', 'email', 'phone', 'reach']):
+            return "For contact information, please check our website or reach out through our contact page."
+        
+        if any(word in question_lower for word in ['price', 'cost', 'pricing']):
+            return "For pricing details, please visit our website or contact our sales team for a quote."
+        
+        if any(word in question_lower for word in ['service', 'product', 'offer']):
+            # Extract headings from context
+            headings = [line for line in context.split('\n') if line.startswith('H1:') or line.startswith('H2:')]
+            if headings:
+                return "We offer: " + ', '.join([h.split(':', 1)[1].strip() for h in headings[:3]])
+        
+        # Default response with context snippet
+        if context:
+            return context.split('\n')[0][:150] + "... For more details, please visit our website."
+        
+        return "I can help you with information about our services. What would you like to know?"
 
 # Initialize session
 def init_session():
