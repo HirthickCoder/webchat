@@ -429,10 +429,32 @@ def chat():
     if not chatbot_id or not message:
         return jsonify({"success": False, "error": "Missing required fields"}), 400
     
+    # Try to get chatbot from database
     chatbot = DatabaseManager.get_chatbot(chatbot_id)
-    if not chatbot:
-        return jsonify({"success": False, "error": "Chatbot not found"}), 404
     
+    # If no chatbot found (database not configured), use fallback mode
+    if not chatbot:
+        # Handle greetings
+        if any(g in message.lower() for g in ['hi', 'hello', 'hey', 'greetings']):
+            response = "👋 Hello! I'm your AI assistant. How can I help you today? (Note: Database not configured - using demo mode)"
+            return jsonify({"success": True, "response": response})
+        
+        # Handle contact requests
+        if any(k in message.lower() for k in ['email', 'contact', 'phone']):
+            response = "📞 To set up contact information, please configure a database and create a chatbot with your company details."
+            return jsonify({"success": True, "response": response})
+        
+        # Use AI for other queries (without company context)
+        prompt = f"""You are a helpful AI assistant.
+
+User Question: {message}
+
+Provide a helpful, concise answer (2-3 sentences):"""
+        
+        response = ai_engine.call_llm(prompt)
+        return jsonify({"success": True, "response": response + "\n\n(Demo mode - create a chatbot for company-specific responses)"})
+    
+    # Normal flow with database
     # Handle greetings
     if any(g in message.lower() for g in ['hi', 'hello', 'hey']):
         response = f"👋 Hello! I'm the AI assistant for **{chatbot['company_name']}**. How can I help you today?"
