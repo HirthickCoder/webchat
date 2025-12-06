@@ -8,6 +8,10 @@ import time
 import json
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Professional landing page configuration
 st.set_page_config(
