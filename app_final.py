@@ -257,6 +257,30 @@ st.markdown("""
         font-weight: 600;
     }
     
+    /* Chat bubbles */
+    .chat-bubble {
+        padding: 1.5rem;
+        border-radius: 20px;
+        margin: 1rem 0;
+        max-width: 70%;
+    }
+    
+    .user-bubble {
+        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        color: white;
+        margin-left: auto;
+        border-radius: 20px 20px 4px 20px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .bot-bubble {
+        background: rgba(30, 41, 59, 0.8);
+        color: #e2e8f0;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 20px 20px 20px 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
     /* Hide Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
