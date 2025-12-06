@@ -570,6 +570,14 @@ elif st.session_state.view == 'create':
 
 # Chat view
 elif st.session_state.view == 'chat':
+    # Check if chatbot exists
+    if not st.session_state.chatbot:
+        st.error("❌ No chatbot found. Please create one first.")
+        if st.button("← Back to Create"):
+            st.session_state.view = 'create'
+            st.rerun()
+        st.stop()
+    
     bot = st.session_state.chatbot
     
     # Header
@@ -610,7 +618,7 @@ elif st.session_state.view == 'chat':
             if any(g in user_input.lower() for g in ['hi', 'hello', 'hey']):
                 response = f"👋 Hello! I'm the AI assistant for {bot['name']}. How can I help you?"
             else:
-                context = bot['pages'][0]['content'][:800] if bot['pages'] else "No content"
+                context = bot['pages'][0]['content'][:800] if bot.get('pages') and len(bot['pages']) > 0 else "No content available"
                 prompt = f"""You are a helpful AI assistant for {bot['name']}.
 
 Context: {context}
@@ -622,3 +630,4 @@ Answer (2-3 sentences):"""
         
         st.session_state.chat_history.append({'role': 'assistant', 'content': response})
         st.rerun()
+
