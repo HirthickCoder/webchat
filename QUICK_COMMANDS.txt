@@ -1,0 +1,106 @@
+╔══════════════════════════════════════════════════════════════╗
+║         CHATBOT SETUP - QUICK REFERENCE COMMANDS             ║
+║              Copy & Paste These Commands                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+📌 STEP 1: INSTALL MYSQL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Download: https://dev.mysql.com/downloads/installer/
+Root Password: Aswin@0099
+
+
+📌 STEP 2: CREATE DATABASE (MySQL Workbench)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Open MySQL Workbench
+2. Connect to localhost (root / Aswin@0099)
+3. Open: database_setup.sql
+4. Click lightning bolt ⚡
+
+
+📌 STEP 3: SETUP ENVIRONMENT FILE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Copy .env.example to .env and edit with your credentials
+
+
+📌 STEP 4: SETUP PYTHON (PowerShell)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Navigate to project folder
+cd "C:\Users\YourName\chatbot_lead_generator"
+
+# Create virtual environment
+py -m venv venv
+
+# Allow script execution (if needed)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Install packages
+pip install -r requirements.txt
+
+
+📌 STEP 5: TEST DATABASE CONNECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+python test_db_connection.py
+
+✅ Should show: "Connected successfully!"
+
+
+📌 STEP 6: RUN THE APP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+streamlit run app.py
+
+Opens at: http://localhost:8501
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                    EVERY TIME YOU RUN                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+cd "C:\Users\YourName\chatbot_lead_generator"
+.\venv\Scripts\Activate.ps1
+streamlit run app.py
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                   TROUBLESHOOTING                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+❌ MySQL can't connect?
+   → Open services.msc → Start "MySQL80"
+
+❌ Error 401 API?
+   → Check OPENROUTER_API_KEY in .env file
+
+❌ Virtual env won't activate?
+   → Run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+❌ Database doesn't exist?
+   → Run database_setup.sql in MySQL Workbench
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                     .ENV FILE CONTENT                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+MYSQL_HOST=localhost
+MYSQL_DATABASE=chatbot_db
+MYSQL_USER=root
+MYSQL_PASSWORD=Aswin@0099
+MYSQL_PORT=3306
+OPENROUTER_API_KEY=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
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                   FILES TO SEND TO FRIEND                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ app.py
+✅ requirements.txt
+✅ database_setup.sql
+✅ .env.example
+✅ test_db_connection.py
+✅ README.md
+✅ SETUP_INSTRUCTIONS.md
+✅ QUICK_COMMANDS.txt (this file)
