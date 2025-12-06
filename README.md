@@ -282,7 +282,7 @@ MIT License - see LICENSE file
 ## 📞 Support
 
 - **Issues:** https://github.com/ASWINKUMARD/chatbot/issues
-- **Email:** your-email@example.com
+- **Email:** aswinkumardoffl@gmail.com
 
 ---
 
@@ -293,3 +293,4 @@ If you find this useful, please ⭐ star this repository!
 ---
 
 **Built with ❤️ by ASWINKUMARD**
+
