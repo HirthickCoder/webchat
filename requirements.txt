@@ -1,5 +1,15 @@
-streamlit
-requests
-beautifulsoup4
-mysql-connector-python
-python-dotenv
+# Flask Backend Requirements
+Flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+mysql-connector-python==8.2.0
+python-dotenv==1.0.0
+
+# Streamlit Frontend Requirements
+streamlit==1.29.0
+plotly==5.18.0
+pandas==2.1.4
+
+# Common Requirements
+lxml==5.0.0
