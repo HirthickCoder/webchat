@@ -1,12 +1,13 @@
 import streamlit as st
 import requests
-import json
-from datetime import datetime
+from bs4 import BeautifulSoup
+import re
+import os
 import hashlib
 import time
-import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
+import json
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Page configuration
 st.set_page_config(
@@ -16,96 +17,133 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Flask API Configuration
-FLASK_API_URL = "http://localhost:5000/api"
+# Get API key from secrets or environment
+def get_secret(key, default=""):
+    try:
+        if hasattr(st, 'secrets') and key in st.secrets:
+            return st.secrets[key]
+    except:
+        pass
+    return os.getenv(key, default)
 
-# Custom CSS for professional look
+OPENROUTER_API_KEY = get_secret("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
+
+MODELS = [
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "microsoft/phi-3-mini-128k-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "nousresearch/hermes-3-llama-3.1-405b:free"
+]
+
+# Professional CSS styling
 st.markdown("""
 <style>
-    /* Main theme colors */
-    :root {
-        --primary-color: #6366f1;
-        --secondary-color: #8b5cf6;
-        --success-color: #10b981;
-        --danger-color: #ef4444;
-        --warning-color: #f59e0b;
+    /* Main theme */
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
     
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Custom containers */
+    /* Header styling */
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 2rem;
-        border-radius: 10px;
+        border-radius: 15px;
         color: white;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        text-align: center;
     }
     
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .main-header p {
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    /* Stat cards */
     .stat-card {
         background: white;
         padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #6366f1;
-        transition: transform 0.2s;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+        transition: all 0.3s;
+        margin: 1rem 0;
     }
     
     .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Chat messages */
     .chat-container {
-        background: #f8fafc;
+        background: white;
         border-radius: 15px;
-        padding: 1.5rem;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        max-height: 500px;
+        overflow-y: auto;
     }
     
     .user-message {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 1rem;
-        border-radius: 15px 15px 5px 15px;
-        margin: 0.5rem 0;
-        max-width: 80%;
+        padding: 1rem 1.5rem;
+        border-radius: 20px 20px 5px 20px;
+        margin: 1rem 0;
         margin-left: auto;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        max-width: 70%;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        animation: slideInRight 0.3s ease;
     }
     
     .bot-message {
-        background: white;
+        background: #f3f4f6;
         color: #1f2937;
-        padding: 1rem;
-        border-radius: 15px 15px 15px 5px;
-        margin: 0.5rem 0;
-        max-width: 80%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border: 1px solid #e5e7eb;
-    }
-    
-    .lead-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
+        padding: 1rem 1.5rem;
+        border-radius: 20px 20px 20px 5px;
         margin: 1rem 0;
-        border-left: 4px solid #10b981;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        transition: all 0.3s;
+        max-width: 70%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        animation: slideInLeft 0.3s ease;
     }
     
-    .lead-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        transform: translateX(5px);
+    @keyframes slideInRight {
+        from { transform: translateX(50px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
     
+    @keyframes slideInLeft {
+        from { transform: translateX(-50px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Chatbot cards */
     .chatbot-card {
-        background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%);
+        background: white;
         border-radius: 12px;
         padding: 1.5rem;
         margin: 1rem 0;
@@ -115,150 +153,283 @@ st.markdown("""
     }
     
     .chatbot-card:hover {
-        border-color: #6366f1;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        border-color: #667eea;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
         transform: translateY(-3px);
     }
     
-    .metric-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
+    /* Lead cards */
+    .lead-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
         margin: 1rem 0;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s;
     }
     
-    .success-badge {
+    .lead-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        transform: translateX(5px);
+    }
+    
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-success {
         background: #d1fae5;
         color: #065f46;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.875rem;
-        font-weight: 600;
     }
     
-    .warning-badge {
+    .badge-warning {
         background: #fef3c7;
         color: #92400e;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.875rem;
-        font-weight: 600;
     }
     
+    .badge-info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    /* Buttons */
     .stButton>button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 0.75rem 2rem;
         font-weight: 600;
         transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     }
     
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
     
+    /* Input fields */
     .stTextInput>div>div>input {
-        border-radius: 8px;
+        border-radius: 10px;
         border: 2px solid #e5e7eb;
         padding: 0.75rem;
+        transition: all 0.3s;
     }
     
     .stTextInput>div>div>input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    /* Sidebar */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    /* Hide streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem;
+        color: #667eea;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# Helper Classes
+class EnhancedScraper:
+    def __init__(self):
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        self.timeout = 8
+    
+    def extract_content(self, soup):
+        content_parts = []
+        
+        if soup.title:
+            content_parts.append(f"TITLE: {soup.title.string}")
+        
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        if meta_desc and meta_desc.get('content'):
+            content_parts.append(f"DESC: {meta_desc.get('content')}")
+        
+        headings = soup.find_all(['h1', 'h2', 'h3'])
+        for h in headings[:15]:
+            text = h.get_text(strip=True)
+            if text:
+                content_parts.append(f"{h.name.upper()}: {text}")
+        
+        paragraphs = soup.find_all('p')
+        for p in paragraphs[:20]:
+            text = p.get_text(strip=True)
+            if len(text) > 20:
+                content_parts.append(text)
+        
+        return '\n'.join(content_parts)[:4000]
+    
+    def scrape_page(self, url):
+        try:
+            resp = requests.get(url, headers=self.headers, timeout=self.timeout, allow_redirects=True)
+            if resp.status_code != 200:
+                return None
+            
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'iframe']):
+                tag.decompose()
+            
+            content = self.extract_content(soup)
+            if not content or len(content) < 100:
+                return None
+            
+            return {"url": url, "content": content}
+        except:
+            return None
+    
+    def scrape_website(self, base_url):
+        if not base_url.startswith('http'):
+            base_url = 'https://' + base_url
+        
+        urls = [base_url, f"{base_url}/about", f"{base_url}/services"]
+        pages = []
+        
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(self.scrape_page, url): url for url in urls}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    pages.append(result)
+        
+        all_text = '\n'.join([p['content'] for p in pages])
+        emails = list(set(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', all_text)))[:5]
+        phones = list(set(re.findall(r'(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}', all_text)))[:5]
+        
+        return pages, {"emails": emails, "phones": phones}
+
+class SmartAI:
+    def __init__(self):
+        self.cache = {}
+        self.current_model_index = 0
+    
+    def call_llm(self, prompt):
+        if not OPENROUTER_API_KEY:
+            return "⚠️ Please configure OPENROUTER_API_KEY in Streamlit secrets."
+        
+        cache_key = hashlib.md5(prompt.encode()).hexdigest()[:12]
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+        
+        for attempt in range(len(MODELS)):
+            model = MODELS[self.current_model_index]
+            try:
+                resp = requests.post(
+                    OPENROUTER_API_BASE,
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://github.com",
+                        "X-Title": "Chatbot"
+                    },
+                    json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 150,
+                        "temperature": 0.7
+                    },
+                    timeout=10
+                )
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "choices" in data and len(data["choices"]) > 0:
+                        result = data["choices"][0]["message"]["content"].strip()
+                        self.cache[cache_key] = result
+                        return result
+            except Exception as e:
+                pass
+            
+            self.current_model_index = (self.current_model_index + 1) % len(MODELS)
+        
+        return "I'm having trouble connecting to the AI service. Please try again."
+
 # Initialize session state
-def init_session_state():
+def init_session():
     defaults = {
+        'chatbots': {},
         'current_view': 'dashboard',
         'selected_chatbot': None,
         'chat_history': [],
-        'session_id': hashlib.md5(str(datetime.now()).encode()).hexdigest()[:16],
         'question_count': 0,
         'lead_captured': False,
-        'conversation_start': None
+        'session_id': hashlib.md5(str(datetime.now()).encode()).hexdigest()[:16],
+        'conversation_start': None,
+        'leads': [],
+        'ai_engine': SmartAI()
     }
-    for key, value in defaults.items():
+    for key, val in defaults.items():
         if key not in st.session_state:
-            st.session_state[key] = value
+            st.session_state[key] = val
 
-init_session_state()
-
-# API Helper Functions
-def api_request(endpoint, method='GET', data=None):
-    """Make API request to Flask backend"""
-    try:
-        url = f"{FLASK_API_URL}/{endpoint}"
-        if method == 'GET':
-            response = requests.get(url, timeout=10)
-        elif method == 'POST':
-            response = requests.post(url, json=data, timeout=10)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"API Error: {response.status_code}")
-            return None
-    except requests.exceptions.ConnectionError:
-        st.error("⚠️ Cannot connect to Flask backend. Make sure it's running on http://localhost:5000")
-        return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None
+init_session()
 
 # Dashboard View
 def show_dashboard():
-    st.markdown('<div class="main-header"><h1>🤖 AI Chatbot Platform</h1><p>Intelligent conversational AI with advanced lead capture</p></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="main-header">
+        <h1>🤖 AI Chatbot Platform</h1>
+        <p>Intelligent conversational AI with advanced lead capture</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Fetch stats
-    stats_data = api_request('stats')
+    # Statistics
+    col1, col2, col3, col4 = st.columns(4)
     
-    if stats_data and stats_data.get('success'):
-        stats = stats_data.get('stats', {})
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="color: #6366f1; margin: 0;">📊 Total Leads</h3>
-                <h1 style="margin: 0.5rem 0;">{stats.get('total_leads', 0)}</h1>
-                <p style="color: #10b981; margin: 0;">↑ Active</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="color: #8b5cf6; margin: 0;">💬 Questions</h3>
-                <h1 style="margin: 0.5rem 0;">{stats.get('total_questions', 0)}</h1>
-                <p style="color: #6366f1; margin: 0;">Total Asked</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="color: #10b981; margin: 0;">📈 Avg. Q/Lead</h3>
-                <h1 style="margin: 0.5rem 0;">{stats.get('avg_questions', 0)}</h1>
-                <p style="color: #10b981; margin: 0;">Per conversation</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="color: #f59e0b; margin: 0;">⚡ Chatbots</h3>
-                <h1 style="margin: 0.5rem 0;">{len(get_all_chatbots())}</h1>
-                <p style="color: #10b981; margin: 0;">Active</p>
-            </div>
-            """, unsafe_allow_html=True)
+    with col1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-label">Total Leads</div>
+            <div class="stat-number">{len(st.session_state.leads)}</div>
+            <div style="color: #10b981;">↑ Active</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        total_questions = sum(lead.get('questions', 0) for lead in st.session_state.leads)
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-label">Questions Asked</div>
+            <div class="stat-number">{total_questions}</div>
+            <div style="color: #667eea;">Total</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        avg_q = total_questions / len(st.session_state.leads) if st.session_state.leads else 0
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-label">Avg. Questions</div>
+            <div class="stat-number">{avg_q:.1f}</div>
+            <div style="color: #10b981;">Per Lead</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-label">Active Bots</div>
+            <div class="stat-number">{len(st.session_state.chatbots)}</div>
+            <div style="color: #f59e0b;">Online</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -266,58 +437,49 @@ def show_dashboard():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("📊 Recent Activity")
-        leads_data = api_request('leads')
-        
-        if leads_data and leads_data.get('success'):
-            leads = leads_data.get('leads', [])[:5]
-            
-            if leads:
-                for lead in leads:
-                    st.markdown(f"""
-                    <div class="lead-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h4 style="margin: 0; color: #1f2937;">👤 {lead.get('username', 'Anonymous')}</h4>
-                                <p style="margin: 0.25rem 0; color: #6b7280;">📧 {lead.get('mailid', 'N/A')}</p>
-                                <p style="margin: 0.25rem 0; color: #6b7280;">🏢 {lead.get('company_name', 'N/A')}</p>
-                            </div>
-                            <div style="text-align: right;">
-                                <span class="success-badge">{lead.get('questions_asked', 0)} Questions</span>
-                                <p style="margin: 0.5rem 0; color: #9ca3af; font-size: 0.875rem;">{lead.get('timestart', 'N/A')}</p>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("No leads captured yet. Create a chatbot to get started!")
-    
-    with col2:
-        st.subheader("🤖 Active Chatbots")
-        chatbots = get_all_chatbots()
-        
-        if chatbots:
-            for bot in chatbots:
+        st.subheader("📊 Recent Leads")
+        if st.session_state.leads:
+            for lead in st.session_state.leads[-5:][::-1]:
                 st.markdown(f"""
-                <div class="chatbot-card">
-                    <h4 style="margin: 0; color: #1f2937;">💬 {bot.get('company_name', 'Unknown')}</h4>
-                    <p style="margin: 0.5rem 0; color: #6b7280; font-size: 0.875rem;">🌐 {bot.get('website_url', 'N/A')[:30]}...</p>
-                    <span class="success-badge">Active</span>
+                <div class="lead-card">
+                    <h4 style="margin: 0;">👤 {lead.get('name', 'Anonymous')}</h4>
+                    <p style="margin: 0.5rem 0; color: #6b7280;">📧 {lead.get('email', 'N/A')}</p>
+                    <p style="margin: 0.5rem 0; color: #6b7280;">🏢 {lead.get('company', 'N/A')}</p>
+                    <span class="badge badge-success">{lead.get('questions', 0)} Questions</span>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("No chatbots yet. Create one to start!")
+            st.info("💡 No leads yet. Create a chatbot and start chatting!")
+    
+    with col2:
+        st.subheader("🤖 Active Chatbots")
+        if st.session_state.chatbots:
+            for key, bot in st.session_state.chatbots.items():
+                st.markdown(f"""
+                <div class="chatbot-card">
+                    <h4 style="margin: 0;">💬 {bot['name']}</h4>
+                    <p style="margin: 0.5rem 0; font-size: 0.85rem; color: #6b7280;">🌐 {bot['url'][:30]}...</p>
+                    <span class="badge badge-success">Active</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Create your first chatbot to get started!")
 
-# Chatbot Management View
+# Chatbot Management
 def show_chatbot_management():
-    st.markdown('<div class="main-header"><h1>🤖 Chatbot Management</h1><p>Create and manage your AI chatbots</p></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="main-header">
+        <h1>🤖 Chatbot Management</h1>
+        <p>Create and manage your AI chatbots</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.subheader("🚀 Create New Chatbot")
         
-        with st.form("create_chatbot_form"):
+        with st.form("create_chatbot"):
             company_name = st.text_input("🏢 Company Name", placeholder="e.g., TechCorp Solutions")
             website_url = st.text_input("🌐 Website URL", placeholder="https://example.com")
             
@@ -328,129 +490,128 @@ def show_chatbot_management():
                 cancel = st.form_submit_button("❌ Cancel", use_container_width=True)
             
             if submit and company_name and website_url:
-                with st.spinner("🔄 Creating chatbot and scraping website..."):
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
+                with st.spinner("🔄 Creating chatbot..."):
+                    progress = st.progress(0)
+                    status = st.empty()
                     
-                    status_text.text("📡 Connecting to website...")
-                    progress_bar.progress(25)
+                    status.text("📡 Connecting to website...")
+                    progress.progress(25)
                     time.sleep(0.5)
                     
-                    status_text.text("🔍 Scraping content...")
-                    progress_bar.progress(50)
+                    status.text("🔍 Scraping content...")
+                    progress.progress(50)
                     
-                    result = api_request('chatbot/create', method='POST', data={
-                        'company_name': company_name,
-                        'website_url': website_url
-                    })
-                    
-                    progress_bar.progress(75)
-                    status_text.text("💾 Saving to database...")
-                    time.sleep(0.5)
-                    
-                    progress_bar.progress(100)
-                    
-                    if result and result.get('success'):
-                        st.success(f"✅ Chatbot created successfully! ID: {result.get('chatbot_id')}")
-                        st.balloons()
-                        time.sleep(2)
-                        st.rerun()
-                    else:
-                        st.error("❌ Failed to create chatbot. Please try again.")
+                    try:
+                        scraper = EnhancedScraper()
+                        pages, contact_info = scraper.scrape_website(website_url)
+                        
+                        if pages:
+                            chatbot_id = hashlib.md5(f"{company_name}{time.time()}".encode()).hexdigest()[:12]
+                            slug = re.sub(r'[^a-z0-9]+', '-', company_name.lower())
+                            
+                            st.session_state.chatbots[slug] = {
+                                'id': chatbot_id,
+                                'name': company_name,
+                                'url': website_url,
+                                'pages': pages,
+                                'contact_info': contact_info,
+                                'created': datetime.now().strftime("%Y-%m-%d %H:%M")
+                            }
+                            
+                            progress.progress(100)
+                            status.text("✅ Chatbot created successfully!")
+                            st.success(f"✅ Chatbot '{company_name}' created successfully!")
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to scrape website. Please check the URL.")
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
     
     with col2:
         st.subheader("📊 Quick Stats")
-        chatbots = get_all_chatbots()
-        st.metric("Total Chatbots", len(chatbots))
-        st.metric("Active Status", f"{len([b for b in chatbots if b.get('status') == 'active'])}/{len(chatbots)}")
+        st.metric("Total Chatbots", len(st.session_state.chatbots))
+        st.metric("Active", len(st.session_state.chatbots))
     
     st.markdown("---")
     
-    # List existing chatbots
-    st.subheader("📋 Your Chatbots")
-    chatbots = get_all_chatbots()
-    
-    if chatbots:
-        for bot in chatbots:
-            with st.expander(f"💬 {bot.get('company_name')} - {bot.get('chatbot_id')}"):
+    # List chatbots
+    if st.session_state.chatbots:
+        st.subheader("📋 Your Chatbots")
+        for key, bot in st.session_state.chatbots.items():
+            with st.expander(f"💬 {bot['name']} - {bot['id']}"):
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.write(f"**🌐 Website:** {bot.get('website_url')}")
-                    st.write(f"**📅 Created:** {bot.get('created_at')}")
+                    st.write(f"**🌐 Website:** {bot['url']}")
+                    st.write(f"**📅 Created:** {bot['created']}")
                 
                 with col2:
-                    st.write(f"**🆔 ID:** {bot.get('chatbot_id')}")
-                    st.write(f"**📊 Status:** {bot.get('status')}")
+                    st.write(f"**🆔 ID:** {bot['id']}")
+                    st.write(f"**📊 Status:** Active")
                 
                 with col3:
-                    if st.button(f"💬 Test Chat", key=f"test_{bot.get('chatbot_id')}"):
-                        st.session_state.selected_chatbot = bot.get('chatbot_id')
+                    if st.button(f"💬 Test Chat", key=f"test_{key}"):
+                        st.session_state.selected_chatbot = key
                         st.session_state.current_view = 'chat'
+                        st.session_state.chat_history = []
+                        st.session_state.question_count = 0
+                        st.session_state.lead_captured = False
                         st.rerun()
-                
-                if bot.get('embed_code'):
-                    st.code(bot.get('embed_code'), language='html')
-                    if st.button(f"📋 Copy Embed Code", key=f"copy_{bot.get('chatbot_id')}"):
-                        st.success("✅ Embed code copied to clipboard!")
-    else:
-        st.info("No chatbots created yet. Use the form above to create your first chatbot!")
+                    
+                    if st.button(f"🗑️ Delete", key=f"del_{key}"):
+                        del st.session_state.chatbots[key]
+                        st.rerun()
 
-# Chat Interface View
+# Chat Interface
 def show_chat_interface():
-    if not st.session_state.selected_chatbot:
+    if not st.session_state.selected_chatbot or st.session_state.selected_chatbot not in st.session_state.chatbots:
         st.warning("⚠️ Please select a chatbot first")
         if st.button("← Back to Dashboard"):
             st.session_state.current_view = 'dashboard'
             st.rerun()
         return
     
-    # Get chatbot details
-    chatbot_data = api_request(f'chatbot/{st.session_state.selected_chatbot}')
-    
-    if not chatbot_data or not chatbot_data.get('success'):
-        st.error("❌ Chatbot not found")
-        return
-    
-    chatbot = chatbot_data.get('chatbot')
+    bot = st.session_state.chatbots[st.session_state.selected_chatbot]
     
     # Header
     col1, col2, col3 = st.columns([3, 1, 1])
     
     with col1:
-        st.markdown(f'<div class="main-header"><h1>💬 {chatbot.get("company_name")}</h1><p>AI-Powered Customer Support</p></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="main-header">
+            <h1>💬 {bot['name']}</h1>
+            <p>AI-Powered Customer Support</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.metric("Questions", st.session_state.question_count)
     
     with col3:
         if st.session_state.lead_captured:
-            st.success("✅ Lead Captured")
+            st.success("✅ Lead")
         else:
-            st.info("🎯 Chatting...")
+            st.info("🎯 Active")
     
-    # Chat container
+    # Chat messages
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     
-    # Display chat history
-    chat_placeholder = st.container()
-    
-    with chat_placeholder:
-        for msg in st.session_state.chat_history:
-            if msg['role'] == 'user':
-                st.markdown(f'<div class="user-message">👤 {msg["content"]}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="bot-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+    for msg in st.session_state.chat_history:
+        if msg['role'] == 'user':
+            st.markdown(f'<div class="user-message">👤 {msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="bot-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Lead capture form (after 3 questions)
+    # Lead capture form
     if st.session_state.question_count >= 3 and not st.session_state.lead_captured:
         st.markdown("---")
         st.subheader("🎯 Quick Contact Information")
-        st.write("We'd love to help you further! Please share your details:")
         
-        with st.form("lead_capture_form"):
+        with st.form("lead_form"):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -459,7 +620,7 @@ def show_chat_interface():
             
             with col2:
                 phone = st.text_input("📱 Phone", placeholder="+1234567890")
-                company = st.text_input("🏢 Company (Optional)", placeholder="Your Company")
+                company = st.text_input("🏢 Company", placeholder="Your Company")
             
             col_a, col_b = st.columns(2)
             with col_a:
@@ -468,197 +629,136 @@ def show_chat_interface():
                 skipped = st.form_submit_button("⏭️ Skip", use_container_width=True)
             
             if submitted or skipped:
-                lead_data = {
-                    'chatbot_id': st.session_state.selected_chatbot,
-                    'company_name': chatbot.get('company_name'),
-                    'username': name if submitted else 'Anonymous',
-                    'email': email if submitted else 'not_provided@example.com',
-                    'phone': phone if submitted else 'Not provided',
-                    'session_id': st.session_state.session_id,
-                    'questions_asked': st.session_state.question_count,
+                lead = {
+                    'name': name or 'Anonymous',
+                    'email': email or 'not_provided@example.com',
+                    'phone': phone or 'Not provided',
+                    'company': company or bot['name'],
+                    'questions': st.session_state.question_count,
                     'conversation': st.session_state.chat_history,
-                    'timestart': st.session_state.conversation_start or datetime.now().isoformat()
+                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
-                
-                result = api_request('lead/capture', method='POST', data=lead_data)
-                
-                if result and result.get('success'):
-                    st.session_state.lead_captured = True
-                    st.success("✅ Thank you! We'll get back to you soon.")
-                    st.balloons()
-                    time.sleep(2)
-                    st.rerun()
+                st.session_state.leads.append(lead)
+                st.session_state.lead_captured = True
+                st.success("✅ Thank you! We'll get back to you soon.")
+                st.balloons()
+                time.sleep(2)
+                st.rerun()
     
     # Chat input
     st.markdown("---")
+    user_input = st.text_input("💬 Type your message...", key="chat_input", placeholder="Ask me anything...")
+    
     col1, col2 = st.columns([5, 1])
-    
-    with col1:
-        user_input = st.text_input("💬 Type your message...", key="chat_input", placeholder="Ask me anything about our services...")
-    
     with col2:
         send_button = st.button("📤 Send", use_container_width=True)
     
     if (send_button or user_input) and user_input:
-        # Add user message
-        st.session_state.chat_history.append({
-            'role': 'user',
-            'content': user_input,
-            'timestamp': datetime.now().isoformat()
-        })
+        st.session_state.chat_history.append({'role': 'user', 'content': user_input})
         
-        # Set conversation start time
-        if not st.session_state.conversation_start:
-            st.session_state.conversation_start = datetime.now().isoformat()
-        
-        # Get bot response
+        # Generate response
         with st.spinner("🤖 Thinking..."):
-            response_data = api_request('chat', method='POST', data={
-                'chatbot_id': st.session_state.selected_chatbot,
-                'message': user_input
-            })
-            
-            if response_data and response_data.get('success'):
-                bot_response = response_data.get('response')
-                st.session_state.chat_history.append({
-                    'role': 'assistant',
-                    'content': bot_response,
-                    'timestamp': datetime.now().isoformat()
-                })
-                st.session_state.question_count += 1
+            # Handle greetings
+            if any(g in user_input.lower() for g in ['hi', 'hello', 'hey']):
+                response = f"👋 Hello! I'm the AI assistant for **{bot['name']}**. How can I help you today?"
+            # Handle contact requests
+            elif any(k in user_input.lower() for k in ['email', 'contact', 'phone']):
+                contact_info = bot.get('contact_info', {})
+                response = f"📞 **Contact {bot['name']}**\n\n"
+                if contact_info.get('emails'):
+                    response += "📧 " + ", ".join(contact_info['emails']) + "\n"
+                if contact_info.get('phones'):
+                    response += "📱 " + ", ".join(contact_info['phones']) + "\n"
+                response += f"🌐 {bot['url']}"
+            else:
+                # Use AI
+                context = bot['pages'][0]['content'][:800] if bot['pages'] else "No content"
+                prompt = f"""You are a helpful AI assistant for {bot['name']}.
+
+Company Information:
+{context}
+
+User Question: {user_input}
+
+Provide a helpful, concise answer (2-3 sentences):"""
+                
+                response = st.session_state.ai_engine.call_llm(prompt)
         
+        st.session_state.chat_history.append({'role': 'assistant', 'content': response})
+        st.session_state.question_count += 1
         st.rerun()
     
-    # Back button
     if st.button("← Back to Dashboard"):
         st.session_state.current_view = 'dashboard'
-        st.session_state.chat_history = []
-        st.session_state.question_count = 0
-        st.session_state.lead_captured = False
-        st.session_state.conversation_start = None
         st.rerun()
 
 # Leads View
 def show_leads():
-    st.markdown('<div class="main-header"><h1>📊 Lead Management</h1><p>View and manage captured leads</p></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="main-header">
+        <h1>📊 Lead Management</h1>
+        <p>View and manage captured leads</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        chatbots = get_all_chatbots()
-        chatbot_options = ['All Chatbots'] + [bot.get('company_name') for bot in chatbots]
-        selected_bot = st.selectbox("🤖 Filter by Chatbot", chatbot_options)
-    
-    with col2:
-        st.date_input("📅 From Date")
-    
-    with col3:
-        st.date_input("📅 To Date")
-    
-    st.markdown("---")
-    
-    # Fetch leads
-    leads_data = api_request('leads')
-    
-    if leads_data and leads_data.get('success'):
-        leads = leads_data.get('leads', [])
-        
-        if leads:
-            # Stats
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("📊 Total Leads", len(leads))
-            
-            with col2:
-                valid_emails = len([l for l in leads if l.get('mailid') and '@' in l.get('mailid')])
-                st.metric("✅ Valid Emails", valid_emails)
-            
-            with col3:
-                avg_questions = sum(l.get('questions_asked', 0) for l in leads) / len(leads) if leads else 0
-                st.metric("💬 Avg. Questions", f"{avg_questions:.1f}")
-            
-            st.markdown("---")
-            
-            # Leads table
-            for lead in leads:
-                with st.expander(f"🎯 {lead.get('username')} - {lead.get('company_name')} ({lead.get('timestart', 'N/A')})"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.write(f"**👤 Name:** {lead.get('username')}")
-                        st.write(f"**📧 Email:** {lead.get('mailid')}")
-                        st.write(f"**📱 Phone:** {lead.get('phonenumber')}")
-                    
-                    with col2:
-                        st.write(f"**🏢 Company:** {lead.get('company_name')}")
-                        st.write(f"**💬 Questions:** {lead.get('questions_asked')}")
-                        st.write(f"**🆔 Session:** {lead.get('session_id')}")
-                    
-                    # Conversation
-                    if lead.get('conversation'):
-                        st.subheader("💬 Conversation")
-                        try:
-                            conversation = json.loads(lead.get('conversation')) if isinstance(lead.get('conversation'), str) else lead.get('conversation')
-                            
-                            for msg in conversation:
-                                if msg['role'] == 'user':
-                                    st.markdown(f"**👤 User:** {msg['content']}")
-                                else:
-                                    st.markdown(f"**🤖 Bot:** {msg['content']}")
-                        except:
-                            st.write(lead.get('conversation'))
-        else:
-            st.info("📭 No leads captured yet. Start chatting to generate leads!")
+    if st.session_state.leads:
+        for lead in st.session_state.leads[::-1]:
+            with st.expander(f"🎯 {lead['name']} - {lead['company']} ({lead['timestamp']})"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**👤 Name:** {lead['name']}")
+                    st.write(f"**📧 Email:** {lead['email']}")
+                    st.write(f"**📱 Phone:** {lead['phone']}")
+                
+                with col2:
+                    st.write(f"**🏢 Company:** {lead['company']}")
+                    st.write(f"**💬 Questions:** {lead['questions']}")
+                    st.write(f"**📅 Time:** {lead['timestamp']}")
+                
+                if lead.get('conversation'):
+                    st.subheader("💬 Conversation")
+                    for msg in lead['conversation']:
+                        if msg['role'] == 'user':
+                            st.markdown(f"**👤 User:** {msg['content']}")
+                        else:
+                            st.markdown(f"**🤖 Bot:** {msg['content']}")
     else:
-        st.error("❌ Unable to fetch leads")
-
-# Helper function to get all chatbots
-def get_all_chatbots():
-    chatbots_data = api_request('chatbots')
-    if chatbots_data and chatbots_data.get('success'):
-        return chatbots_data.get('chatbots', [])
-    return []
+        st.info("📭 No leads captured yet. Start chatting to generate leads!")
 
 # Sidebar Navigation
 with st.sidebar:
     st.markdown("## 🎯 Navigation")
     
-    if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
+    if st.button("📊 Dashboard", use_container_width=True):
         st.session_state.current_view = 'dashboard'
         st.rerun()
     
-    if st.button("🤖 Chatbots", use_container_width=True, key="nav_chatbots"):
+    if st.button("🤖 Chatbots", use_container_width=True):
         st.session_state.current_view = 'chatbots'
         st.rerun()
     
-    if st.button("📋 Leads", use_container_width=True, key="nav_leads"):
+    if st.button("💬 Chat", use_container_width=True):
+        st.session_state.current_view = 'chat'
+        st.rerun()
+    
+    if st.button("📊 Leads", use_container_width=True):
         st.session_state.current_view = 'leads'
         st.rerun()
     
-    if st.button("💬 Chat Test", use_container_width=True, key="nav_chat"):
-        chatbots = get_all_chatbots()
-        if chatbots:
-            st.session_state.selected_chatbot = chatbots[0].get('chatbot_id')
-            st.session_state.current_view = 'chat'
-            st.rerun()
-        else:
-            st.warning("Create a chatbot first!")
+    st.markdown("---")
+    st.markdown("### ℹ️ Info")
+    st.info(f"**Active Bots:** {len(st.session_state.chatbots)}")
+    st.info(f"**Total Leads:** {len(st.session_state.leads)}")
     
     st.markdown("---")
-    
-    st.markdown("### ⚙️ Settings")
-    st.markdown(f"**API Status:** {'🟢 Connected' if api_request('health') else '🔴 Disconnected'}")
-    st.markdown(f"**Session:** {st.session_state.session_id}")
-    
-    st.markdown("---")
-    st.markdown("### 📚 Resources")
-    st.markdown("- [Documentation](#)")
-    st.markdown("- [API Reference](#)")
-    st.markdown("- [Support](#)")
+    st.markdown("### 🔑 API Status")
+    if OPENROUTER_API_KEY:
+        st.success("✅ Connected")
+    else:
+        st.error("❌ Not configured")
 
-# Main content based on current view
+# Main routing
 if st.session_state.current_view == 'dashboard':
     show_dashboard()
 elif st.session_state.current_view == 'chatbots':
@@ -667,3 +767,5 @@ elif st.session_state.current_view == 'chat':
     show_chat_interface()
 elif st.session_state.current_view == 'leads':
     show_leads()
+else:
+    show_dashboard() 
