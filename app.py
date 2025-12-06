@@ -343,6 +343,29 @@ DatabaseManager.initialize_database()
 ai_engine = SmartAI()
 
 # API Endpoints
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "message": "🤖 Chatbot API - Successfully Deployed!",
+        "status": "running",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/api/health",
+            "chatbots": {
+                "list": "GET /api/chatbots",
+                "get": "GET /api/chatbot/<chatbot_id>",
+                "create": "POST /api/chatbot/create"
+            },
+            "chat": "POST /api/chat",
+            "leads": {
+                "capture": "POST /api/lead/capture",
+                "list": "GET /api/leads",
+                "stats": "GET /api/stats"
+            }
+        },
+        "documentation": "https://github.com/ASWINKUMARD/chatbot"
+    })
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
