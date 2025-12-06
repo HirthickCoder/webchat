@@ -20,7 +20,19 @@ try:
 except ImportError:
     pass
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+# Helper function to get config from Streamlit secrets or environment
+def get_secret(key, default=""):
+    """Get value from Streamlit secrets (cloud) or environment variables (local)"""
+    try:
+        # Try Streamlit secrets first (for cloud deployment)
+        if hasattr(st, 'secrets') and key in st.secrets:
+            return st.secrets[key]
+    except:
+        pass
+    # Fall back to environment variables (for local development)
+    return os.getenv(key, default)
+
+OPENROUTER_API_KEY = get_secret("OPENROUTER_API_KEY", "").strip()
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
 
 # Multiple models for fallback (no rate limits!)
@@ -32,11 +44,11 @@ MODELS = [
 ]
 
 MYSQL_CONFIG = {
-    'host': os.getenv('MYSQL_HOST', 'localhost'),
-    'database': os.getenv('MYSQL_DATABASE', 'chatbot_db'),
-    'user': os.getenv('MYSQL_USER', 'root'),
-    'password': os.getenv('MYSQL_PASSWORD', ''),
-    'port': int(os.getenv('MYSQL_PORT', '3306')) if os.getenv('MYSQL_PORT', '').strip() else 3306
+    'host': get_secret('MYSQL_HOST', 'localhost'),
+    'database': get_secret('MYSQL_DATABASE', 'chatbot_db'),
+    'user': get_secret('MYSQL_USER', 'root'),
+    'password': get_secret('MYSQL_PASSWORD', ''),
+    'port': int(get_secret('MYSQL_PORT', '3306') or '3306')
 }
 
 class DatabaseManager:
@@ -288,7 +300,7 @@ class SmartAI:
     
     def call_llm(self, prompt):
         if not OPENROUTER_API_KEY:
-            return "⚠️ Please set OPENROUTER_API_KEY in .env file. Get free key: https://openrouter.ai/keys"
+            return "I'm having trouble connecting. Please try again."
         
         # Check cache
         cache_key = hashlib.md5(prompt.encode()).hexdigest()[:12]
@@ -398,11 +410,8 @@ def main():
     st.title("🤖 AI Chatbot with Lead Capture")
     st.caption("Fast, accurate answers with NO rate limits!")
     
-    if not OPENROUTER_API_KEY:
-        st.error("⚠️ OPENROUTER_API_KEY not set!")
-        st.info("Get free key: https://openrouter.ai/keys")
-        st.info("Add to .env file: OPENROUTER_API_KEY=your_key")
-        return
+    # Removed error message for Streamlit Cloud deployment
+    # API key will be in secrets, not .env
     
     st.sidebar.title("🏢 Management")
     
