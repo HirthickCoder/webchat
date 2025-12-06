@@ -9,7 +9,8 @@ python-dotenv==1.0.0
 # Streamlit Frontend Requirements
 streamlit==1.29.0
 plotly==5.18.0
-pandas==2.1.4
+pandas>=2.2.0
 
 # Common Requirements
 lxml==5.0.0
+
