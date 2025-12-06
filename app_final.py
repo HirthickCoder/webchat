@@ -548,7 +548,7 @@ elif st.session_state.view == 'create':
                             scraper = EnhancedScraper()
                             pages, _ = scraper.scrape_website(website_url)
                             
-                            if pages:
+                            if pages and len(pages) > 0:
                                 st.session_state.chatbot = {
                                     'name': company_name,
                                     'url': website_url,
@@ -556,12 +556,18 @@ elif st.session_state.view == 'create':
                                 }
                                 st.session_state.view = 'chat'
                                 st.success("✅ Agent created!")
-                                time.sleep(1)
+                                time.sleep(0.5)
                                 st.rerun()
                             else:
-                                st.error("❌ Couldn't access website")
-                        except:
-                            st.error("❌ Error occurred")
+                                st.error(f"❌ Couldn't scrape {website_url}. Please check the URL and try again.")
+                        except requests.exceptions.Timeout:
+                            st.error("❌ Website took too long to respond. Try again.")
+                        except requests.exceptions.ConnectionError:
+                            st.error("❌ Cannot connect to website. Check your internet connection.")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)[:100]}")
+                else:
+                    st.warning("⚠️ Please enter both company name and website URL")
         
         with col_b:
             if st.button("← Back", use_container_width=True):
