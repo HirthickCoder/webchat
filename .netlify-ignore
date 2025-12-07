@@ -1,0 +1,2 @@
+# This file tells Netlify to ignore Python runtime
+# Deploy as static HTML only
