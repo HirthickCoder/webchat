@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot Lead Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2f3a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .landing-container {
+            max-width: 1200px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(16, 185, 129, 0.6);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .feature {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .feature h3 {
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="landing-container">
+        <h1>🤖 AI Chatbot Lead Generator</h1>
+        <p>Intelligent chatbot powered by AI that captures leads and answers customer questions</p>
+
+        <a href="chat_interface.html" class="cta-button">Launch Chatbot →</a>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🚀 AI-Powered</h3>
+                <p>Uses advanced AI models to provide intelligent responses</p>
+            </div>
+            <div class="feature">
+                <h3>🌐 Web Scraping</h3>
+                <p>Automatically learns from your website content</p>
+            </div>
+            <div class="feature">
+                <h3>📊 Lead Capture</h3>
+                <p>Captures and stores customer information in database</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

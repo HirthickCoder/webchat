@@ -13,7 +13,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables - prioritize .env.local for local development
+from pathlib import Path
+env_local = Path('.env.local')
+if env_local.exists():
+    load_dotenv('.env.local')
+else:
+    load_dotenv()
 
 app = Flask(__name__)
 CORS(app)

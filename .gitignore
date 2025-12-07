@@ -1,6 +1,3 @@
-# Environment variables (NEVER commit these!)
-.env
-
 # Python
 __pycache__/
 *.py[cod]
@@ -23,10 +20,17 @@ wheels/
 .installed.cfg
 *.egg
 
-# Streamlit
-.streamlit/
+# Virtual Environment
+venv/
+ENV/
+env/
 
-# IDEs
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -43,3 +47,13 @@ Thumbs.db
 # Database
 *.db
 *.sqlite
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak

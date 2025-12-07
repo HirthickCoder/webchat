@@ -1,32 +1,36 @@
-# 🤖 AI Chatbot with Lead Capture
+# 🤖 AI Chatbot Lead Generator
 
-**Fast, accurate chatbot with NO rate limits!** Built with Streamlit, OpenRouter AI, and MySQL.
-
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)](https://streamlit.io/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
----
+An intelligent chatbot application powered by AI that captures leads, scrapes website content, and provides automated customer support.
 
 ## ✨ Features
 
-- ✅ **No Rate Limits** - Uses 4 AI models with auto-switching
-- ✅ **Fast Responses** - 2-3 second answers
-- ✅ **Smart Scraping** - Extracts comprehensive website content
-- ✅ **Lead Capture** - Automatic after 3 questions
-- ✅ **MySQL Storage** - Stores conversations and leads
-- ✅ **Custom URLs** - Scrape specific pages
-- ✅ **Embed Code** - Easy website integration
+- 🚀 **AI-Powered Responses** - Uses advanced AI models for intelligent conversations
+- 🌐 **Web Scraping** - Automatically learns from your website content
+- 📊 **Lead Capture** - Stores customer information in MySQL database
+- 💬 **Real-time Chat** - Beautiful, responsive chat interface
+- 🔌 **REST API** - Full-featured API for integration
 
----
+## 🛠️ Tech Stack
+
+- **Backend:** Flask (Python)
+- **Frontend:** HTML, CSS, JavaScript
+- **Database:** MySQL
+- **AI:** OpenRouter API / Google Gemini
+- **Deployment:** Render (Backend) + Netlify (Frontend)
+
+## 📋 Prerequisites
+
+- Python 3.7+
+- MySQL Server
+- Git
 
 ## 🚀 Quick Start
 
-### 1. Clone Repository
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/ASWINKUMARD/chatbot.git
-cd chatbot
+git clone https://github.com/YOUR_USERNAME/chatbot-lead-generator.git
+cd chatbot-lead-generator
 ```
 
 ### 2. Install Dependencies
@@ -35,262 +39,128 @@ cd chatbot
 pip install -r requirements.txt
 ```
 
-### 3. Setup Database
+### 3. Configure Environment
 
-```bash
-# Start MySQL server
-# Then run:
-mysql -u root -p < database_setup.sql
-```
-
-### 4. Configure Environment
-
-Create `.env` file:
+Create a `.env.local` file:
 
 ```env
-OPENROUTER_API_KEY=your_key_here
 MYSQL_HOST=localhost
-MYSQL_DATABASE=chatbot_db
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=chatbot_db
 MYSQL_PORT=3306
+
+GEMINI_API_KEY=your_gemini_api_key
+OPENROUTER_API_KEY=your_openrouter_key (optional)
+
+FLASK_ENV=development
+FLASK_DEBUG=True
 ```
 
-Get free API key: https://openrouter.ai/keys
-
-### 5. Run Application
+### 4. Initialize Database
 
 ```bash
-streamlit run app_final.py
+python -c "from app import DatabaseManager; DatabaseManager.initialize_database()"
 ```
 
-Visit: http://localhost:8501
+### 5. Run the Application
 
----
+```bash
+python app.py
+```
 
-## 📖 Usage
+Or use the batch file:
+```bash
+RUN_FLASK.bat
+```
 
-### Create Chatbot
+The server will start at: http://localhost:5000
 
-1. Enter company name
-2. Enter website URL
-3. Click "Create"
+### 6. Open Chat Interface
 
-### Ask Questions
+Open `chat_interface.html` in your browser or navigate to `index.html`.
 
-- "What services do you offer?"
-- "How much does it cost?"
-- "Do you have pricing plans?"
+## 🌐 Deployment
 
-### View Leads
-
-Click "View Leads" in sidebar to see captured leads with:
-- Name, email, phone
-- Full conversation history
-- Timestamps
-
----
-
-## 🎯 How It Works
-
-### Multi-Model System
-
-Uses 4 different AI models:
-1. `meta-llama/llama-3.2-3b-instruct:free`
-2. `microsoft/phi-3-mini-128k-instruct:free`
-3. `google/gemma-2-9b-it:free`
-4. `nousresearch/hermes-3-llama-3.1-405b:free`
-
-**When one hits rate limit → auto-switches to next!**
-
-### Web Scraping
-
-Extracts:
-- Page titles & descriptions
-- Headings (H1-H4)
-- Paragraphs & lists
-- Tables
-- Contact info (emails, phones)
-
-### Lead Capture
-
-Automatically triggers after 3 questions:
-- Collects name, email, phone
-- Saves full conversation
-- Stores in MySQL
-- Continues chat seamlessly
-
----
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions on deploying to:
+- **Render** (Backend)
+- **Netlify** (Frontend)
+- **Railway/PlanetScale** (Database)
 
 ## 📁 Project Structure
 
 ```
 chatbot/
-├── app_final.py              # Main application (USE THIS!)
-├── requirements.txt           # Python dependencies
-├── database_setup.sql         # Database schema
-├── .env.example              # Environment template
-├── .gitignore                # Git ignore rules
-├── README.md                 # This file
-├── SETUP_INSTRUCTIONS.md     # Detailed setup guide
-└── GIT_UPLOAD_COMMANDS.md    # Git commands reference
+├── app.py                    # Main Flask application
+├── requirements.txt          # Python dependencies
+├── index.html               # Landing page
+├── chat_interface.html      # Chat interface
+├── test_db_connection.py    # Database connection tester
+├── render.yaml              # Render deployment config
+├── Procfile                 # Process configuration
+├── netlify.toml             # Netlify configuration
+├── DEPLOYMENT_GUIDE.md      # Deployment instructions
+└── .env.local               # Environment variables (not in Git)
 ```
 
----
+## 🔧 API Endpoints
 
-## 🔧 Configuration
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | API documentation |
+| `/api/health` | GET | Health check |
+| `/api/chatbot/create` | POST | Create new chatbot |
+| `/api/chatbot/<id>` | GET | Get chatbot details |
+| `/api/chat` | POST | Send chat message |
+| `/api/lead/capture` | POST | Capture lead |
+| `/api/leads` | GET | Get all leads |
+| `/api/stats` | GET | Get statistics |
 
-### Speed Settings
+## 🧪 Testing
 
-Edit `app_final.py` line 362:
-
-```python
-"max_tokens": 100,  # Adjust for answer length
-timeout=5,          # Adjust for speed
+Test database connection:
+```bash
+python test_db_connection.py
 ```
 
-### Context Size
-
-Edit `app_final.py` line 467:
-
-```python
-context = self.pages[0]['content'][:800]  # Adjust chars
+Test API:
+```bash
+curl http://localhost:5000/api/health
 ```
 
----
+## 📝 Environment Variables
 
-## 📊 Database Schema
-
-### Leads Table
-
-| Field | Type | Description |
-|-------|------|-------------|
-| userid | INT | Auto-increment ID |
-| username | VARCHAR(255) | Lead name |
-| mailid | VARCHAR(255) | Email address |
-| phonenumber | VARCHAR(100) | Phone number |
-| conversation | TEXT | JSON chat history |
-| timestart | TIMESTAMP | Start time |
-| timeend | TIMESTAMP | End time |
-| chatbot_id | VARCHAR(255) | Chatbot identifier |
-| company_name | VARCHAR(255) | Company name |
-| session_id | VARCHAR(255) | Session identifier |
-| questions_asked | INT | Question count |
-
-### Chatbots Table
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | INT | Auto-increment ID |
-| chatbot_id | VARCHAR(255) | Unique identifier |
-| company_name | VARCHAR(255) | Company name |
-| website_url | TEXT | Website URL |
-| embed_code | TEXT | Embed code |
-| created_at | TIMESTAMP | Creation time |
-
----
-
-## 🎨 Features in Detail
-
-### 1. No Rate Limits
-
-- Uses 4 different AI models
-- Auto-switches on rate limit
-- ~80 requests/min capacity
-- Virtually unlimited for normal use
-
-### 2. Fast Responses
-
-- 2-3 seconds for new questions
-- 0.1 seconds for cached questions
-- Instant for greetings/contact
-
-### 3. Smart Caching
-
-- Caches responses for 1 hour
-- Instant for repeated questions
-- Reduces API calls
-
-### 4. Lead Capture
-
-- Triggers after 3 questions
-- One simple form
-- Saves to MySQL
-- Continues conversation
-
----
-
-## 🚀 Deployment
-
-### Streamlit Cloud
-
-1. Push to GitHub
-2. Visit https://streamlit.io/cloud
-3. Connect repository
-4. Add secrets in dashboard
-5. Deploy!
-
-### Secrets Configuration
-
-Add in Streamlit Cloud dashboard:
-
-```toml
-OPENROUTER_API_KEY = "your_key"
-MYSQL_HOST = "your_host"
-MYSQL_DATABASE = "chatbot_db"
-MYSQL_USER = "your_user"
-MYSQL_PASSWORD = "your_password"
-MYSQL_PORT = "3306"
-```
-
----
-
-## 📝 Requirements
-
-- Python 3.8+
-- MySQL 8.0+
-- OpenRouter API key (free)
-
----
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MYSQL_HOST` | MySQL server host | Yes |
+| `MYSQL_USER` | MySQL username | Yes |
+| `MYSQL_PASSWORD` | MySQL password | Yes |
+| `MYSQL_DATABASE` | Database name | Yes |
+| `MYSQL_PORT` | MySQL port (default: 3306) | No |
+| `GEMINI_API_KEY` | Google Gemini API key | Yes |
+| `OPENROUTER_API_KEY` | OpenRouter API key | No |
+| `FLASK_ENV` | Environment (development/production) | No |
+| `FLASK_DEBUG` | Debug mode (True/False) | No |
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Open pull request
-
----
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-MIT License - see LICENSE file
-
----
+This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- OpenRouter for free AI API
-- Streamlit for amazing framework
-- BeautifulSoup for web scraping
+- Flask framework
+- OpenRouter AI
+- Google Gemini
+- Beautiful Soup for web scraping
+
+## 📧 Contact
+
+For questions or support, please open an issue on GitHub.
 
 ---
 
-## 📞 Support
-
-- **Issues:** https://github.com/ASWINKUMARD/chatbot/issues
-- **Email:** aswinkumardoffl@gmail.com
-
----
-
-## 🎉 Star This Repo!
-
-If you find this useful, please ⭐ star this repository!
-
----
-
-**Built with ❤️ by ASWINKUMARD**
-
+Made with ❤️ using Flask and AI
