@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,6 +72,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -177,9 +179,13 @@
         }
 
         @keyframes typing {
-            0%, 60%, 100% {
+
+            0%,
+            60%,
+            100% {
                 transform: translateY(0);
             }
+
             30% {
                 transform: translateY(-10px);
             }
@@ -258,6 +264,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="chat-container">
         <div class="chat-header">
@@ -288,19 +295,15 @@
 
         <div class="chat-input-container">
             <div class="chat-input-wrapper">
-                <input 
-                    type="text" 
-                    id="chatInput" 
-                    placeholder="Type your message here..."
-                    onkeypress="handleKeyPress(event)"
-                >
+                <input type="text" id="chatInput" placeholder="Type your message here..."
+                    onkeypress="handleKeyPress(event)">
                 <button id="sendButton" onclick="sendMessage()">Send</button>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE_URL = 'https://chatbot-kagh.onrender.com';
+        const API_BASE_URL = 'https://webchat-1-lcc2.onrender.com';
         let currentChatbotId = null;
 
         // Create a new chatbot
@@ -434,4 +437,5 @@
         });
     </script>
 </body>
+
 </html>
